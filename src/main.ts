@@ -1,13 +1,17 @@
 import { ErrorMapper } from "utils/ErrorMapper";
 
+// 引入房间管理
+import RoomManager from "room/RoomManager";
+// 引入公共的字典配置
+import dictionary from "config/dictionary";
+
 declare global {
   /*
-    Example types, expand on these or remove them and add your own.
-    Note: Values, properties defined here do no fully *exist* by this type definiton alone.
-          You must also give them an implemention if you would like to use them. (ex. actually setting a `role` property in a Creeps memory)
-
-    Types added in this `global` block are in an ambient, global context. This is needed because `main.ts` is a module file (uses import or export).
-    Interfaces matching on name from @types/screeps will be merged. This is how you can extend the 'built-in' interfaces from @types/screeps.
+    示例类型，展开这些类型或删除它们并添加自己的类型。
+    注意：此处定义的值和属性不完全*仅通过此类型定义而存在*。
+        如果您想使用它们，还必须实现它们。（例如，在Creeps内存中实际设置“角色”属性）
+    在此“全局”块中添加的类型位于环境全局上下文中。这是必需的，因为“main.ts”是一个模块文件（使用导入或导出）。
+    将合并与@types/screeps中的名称匹配的接口。这就是如何从@types/screps扩展“内置”接口的方法。
   */
   // Memory extension samples
   interface Memory {
@@ -25,19 +29,32 @@ declare global {
   namespace NodeJS {
     interface Global {
       log: any;
+      dictionary: any; // 字典配置
     }
   }
 }
 
-// When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
-// This utility uses source maps to get the line numbers and file names of the original, TS source code
+// 将TS编译为JS并与汇总绑定时，错误消息中的行号和文件名会更改
+// 此实用程序使用源映射来获取原始TS源代码的行号和文件名
 export const loop = ErrorMapper.wrapLoop(() => {
-  console.log(`Current game tick is ${Game.time}`);
+  // 挂载全局字典变量
+  global.dictionary = dictionary;
+  console.log(`Current game ticsssk is ${Game.time}`);
+  // 移除失效creep以防重复或者派发无效任务到无效creep
+  removeDeadCreep();
+  // 调用房间管理
+  for (const roomName in Game.rooms) {
+    const room = Game.rooms[roomName];
+    const roomManager = new RoomManager();
+    roomManager.loop(room);
+  }
+});
 
-  // Automatically delete memory of missing creeps
+// 移除房间内的失效Creep
+function removeDeadCreep() {
   for (const name in Memory.creeps) {
     if (!(name in Game.creeps)) {
       delete Memory.creeps[name];
     }
   }
-});
+}
